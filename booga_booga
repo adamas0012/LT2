@@ -56,7 +56,7 @@ Tabs.Main:CreateButton({Title = "Copy HWID", Callback = function() setclipboard(
 Tabs.Main:CreateButton({Title = "Copy SID", Callback = function() setclipboard(rbxservice:GetSessionId()) end})
 --{COMBAT TAB}
 local healtoggle = Tabs.Combat:CreateToggle("healtoggle", { Title = "Auto Heal", Default = false })
-local healslider = Tabs.Pickup:CreateSlider("healslider", { Title = "Hp to Heal", Min = 1, Max = 100, Rounding = 1, Default = 70 })
+local healslider = Tabs.Combat:CreateSlider("healslider", { Title = "Hp to Heal", Min = 1, Max = 100, Rounding = 1, Default = 70 })
 local healtextbox = Tabs.Combat:AddInput("healtextbox", { Title = "Custom Heal Item", Default = "Bloodfruit", Numeric = false, Finished = false })
 local numhealtextbox = Tabs.Combat:AddInput("numhealtextbox", { Title = "How many eat", Default = "5", Numeric = true, Finished = false })
 local killauratoggle = Tabs.Combat:CreateToggle("killauratoggle", { Title = "Kill Aura", Default = false })
@@ -790,5 +790,6 @@ Library:Notify{
 SaveManager:LoadAutoloadConfig()
 
 print("Done! Enjoy Herkle Hub!")
+
 
 
