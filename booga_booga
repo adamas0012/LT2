@@ -55,6 +55,10 @@ Tabs.Main:CreateButton({Title = "Copy Job ID", Callback = function() setclipboar
 Tabs.Main:CreateButton({Title = "Copy HWID", Callback = function() setclipboard(rbxservice:GetClientId()) end})
 Tabs.Main:CreateButton({Title = "Copy SID", Callback = function() setclipboard(rbxservice:GetSessionId()) end})
 --{COMBAT TAB}
+local healtoggle = Tabs.Combat:CreateToggle("healtoggle", { Title = "Auto Heal", Default = false })
+local healslider = Tabs.Pickup:CreateSlider("healslider", { Title = "Hp to Heal", Min = 1, Max = 100, Rounding = 1, Default = 70 })
+local healtextbox = Tabs.Combat:AddInput("healtextbox", { Title = "Custom Heal Item", Default = "Bloodfruit", Numeric = false, Finished = false })
+local numhealtextbox = Tabs.Combat:AddInput("numhealtextbox", { Title = "How many eat", Default = "5", Numeric = true, Finished = false })
 local killauratoggle = Tabs.Combat:CreateToggle("killauratoggle", { Title = "Kill Aura", Default = false })
 local killaurarangeslider = Tabs.Combat:CreateSlider("killaurarange", { Title = "Range", Min = 1, Max = 9, Rounding = 1, Default = 5 })
 local katargetcountdropdown = Tabs.Combat:CreateDropdown("katargetcountdropdown", { Title = "Max Targets", Values = { "1", "2", "3", "4", "5", "6" }, Default = "1" })
@@ -72,9 +76,9 @@ local crittercooldownslider = Tabs.Map:CreateSlider("crittercooldownslider", { T
 local autopickuptoggle = Tabs.Pickup:CreateToggle("autopickuptoggle", { Title = "Auto Pickup", Default = false })
 local chestpickuptoggle = Tabs.Pickup:CreateToggle("chestpickuptoggle", { Title = "Auto Pickup From Chests", Default = false })
 local pickuprangeslider = Tabs.Pickup:CreateSlider("pickuprange", { Title = "Pickup Range", Min = 1, Max = 35, Rounding = 1, Default = 20 })
-local itemdropdown = Tabs.Pickup:CreateDropdown("itemdropdown", {Title = "Items", Values = {"Berry", "Bloodfruit", "Bluefruit", "Lemon", "Strawberry", "Gold", "Raw Gold", "Crystal Chunk", "Coin", "Coins", "Coin2", "Coin Stack", "Essence", "Emerald", "Raw Emerald", "Pink Diamond", "Raw Pink Diamond", "Void Shard","Jelly", "Magnetite", "Raw Magnetite", "Adurite", "Raw Adurite", "Ice Cube", "Stone", "Iron", "Raw Iron", "Steel", "Hide", "Leaves", "Log", "Wood", "Pie", "Sunfruit", "Coal"}, Multi = true, Default = { Leaves = true, Log = true }})
+local itemdropdown = Tabs.Pickup:CreateDropdown("itemdropdown", {Title = "Items", Values = {"Berry", "Coal", "Bloodfruit", "Bluefruit", "Lemon", "Strawberry", "Gold", "Raw Gold", "Crystal Chunk", "Coin", "Coins", "Coin2", "Coin Stack", "Essence", "Emerald", "Raw Emerald", "Pink Diamond", "Raw Pink Diamond", "Void Shard","Jelly", "Magnetite", "Raw Magnetite", "Adurite", "Raw Adurite", "Ice Cube", "Stone", "Iron", "Raw Iron", "Steel", "Hide", "Leaves", "Log", "Wood", "Pie", "Sunfruit"}, Multi = true, Default = { Leaves = true, Log = true }})
 local droptoggle = Tabs.Pickup:AddToggle("droptoggle", { Title = "Auto Drop", Default = false })
-local dropdropdown = Tabs.Pickup:AddDropdown("dropdropdown", {Title = "Select Item to Drop", Values = { "Bloodfruit", "Jelly", "Bluefruit", "Log", "Leaves", "Wood", "Sunfruit" }, Default = "Bloodfruit"})
+local dropdropdown = Tabs.Pickup:AddDropdown("dropdropdown", {Title = "Select Item to Drop", Values = { "Bloodfruit", "Jelly", "Bluefruit", "Log", "Leaves", "Wood", "Sunfruit", "Crystal Chunk", "Emerald", "Raw Emerald", "Pink Diamond", "Raw Pink Diamond", "Void Shard","Jelly", "Magnetite", "Raw Magnetite", "Adurite", "Raw Adurite" }, Default = "Bloodfruit"})
 local droptogglemanual = Tabs.Pickup:AddToggle("droptogglemanual", { Title = "Auto Drop Custom", Default = false })
 local droptextbox = Tabs.Pickup:AddInput("droptextbox", { Title = "Custom Item", Default = "Bloodfruit", Numeric = false, Finished = false })
 --{FARMING TAB}
@@ -174,6 +178,71 @@ local function getlayout(itemname)
     end
     return nil
 end
+
+local function useItemBySlot(slotIndex)
+    if not slotIndex then return false end
+    if packets.UseBagItem and packets.UseBagItem.send then
+        -- ลองส่งเป็น "เลขล้วน" ก่อน (โปรเจกต์นี้มักรับรูปนี้)
+        local ok = pcall(function() packets.UseBagItem.send(slotIndex) end)
+        if ok then return true end
+        -- เผื่อบางเซิร์ฟฯ ใช้ฟอร์มตาราง
+        ok = pcall(function() packets.UseBagItem.send({ index = slotIndex }) end)
+        if ok then return true end
+        ok = pcall(function() packets.UseBagItem.send({ slot = slotIndex }) end)
+        if ok then return true end
+        ok = pcall(function() packets.UseBagItem.send({ layoutOrder = slotIndex }) end)
+        if ok then return true end
+    end
+    return false
+end
+
+-- กินด้วย "ชื่อไอเท็ม": หา slot จาก GUI แล้วส่ง N ครั้ง
+local function consumeByName(itemName, times)
+    itemName = tostring(itemName or ""):gsub("^%s+", ""):gsub("%s+$","")
+    if itemName == "" then return end
+
+    local slot = getlayout(itemName)
+    if not slot then
+        warn(("[AutoHeal] Item '%s' not found in Inventory GUI"):format(itemName))
+        return
+    end
+
+    times = math.max(1, tonumber(times) or 1)
+    for i = 1, times do
+        local ok = useItemBySlot(slot)
+        if not ok then
+            warn(("[AutoHeal] UseBagItem failed (slot=%s) on round %d"):format(tostring(slot), i))
+            break
+        end
+        task.wait(0.06) -- กันสแปม ใช้สั้น ๆ พอให้เซิร์ฟรับคิว (ปรับได้)
+    end
+end
+
+-- ลูปเฝ้า HP ตามสวิตช์/สไลเดอร์/อินพุตใน UI เดิม
+task.spawn(function()
+    local lastUseAt = 0
+    local cd = 0.15 -- คูลดาวน์กันกดรัว (วินาที) ปรับได้
+
+    while true do
+        -- มี humanoid และ toggle เปิดอยู่
+        if hum and hum.Health > 0 and healtoggle.Value then
+            local hp = hum.Health
+            local maxhp = math.max(1, hum.MaxHealth)
+            local hpPercent = (hp / maxhp) * 100
+
+            local threshold = tonumber(healslider.Value) or 70
+            local itemName = tostring(healtextbox.Value or "Bloodfruit")
+            local count = tonumber(numhealtextbox.Value) or 1
+
+            if hpPercent <= threshold and (tick() - lastUseAt) >= cd then
+                -- กินทันทีตามจำนวน
+                consumeByName(itemName, count)
+                lastUseAt = tick()
+            end
+        end
+        task.wait(0.05) -- ความถี่ตรวจ (เบาเครื่อง + ตอบสนองไว)
+    end
+end)
 
 local function swingtool(tspmogngicl)
     if packets.SwingTool and packets.SwingTool.send then
@@ -721,4 +790,5 @@ Library:Notify{
 SaveManager:LoadAutoloadConfig()
 
 print("Done! Enjoy Herkle Hub!")
+
 
