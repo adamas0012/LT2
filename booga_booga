@@ -56,7 +56,7 @@ Tabs.Main:CreateButton({Title = "Copy HWID", Callback = function() setclipboard(
 Tabs.Main:CreateButton({Title = "Copy SID", Callback = function() setclipboard(rbxservice:GetSessionId()) end})
 --{COMBAT TAB}
 local healtoggle = Tabs.Combat:CreateToggle("healtoggle", { Title = "Auto Heal", Default = false })
-local healslider = Tabs.Combat:CreateSlider("healslider", { Title = "Hp to Heal", Min = 1, Max = 100, Rounding = 1, Default = 70 })
+local healslider = Tabs.Combat:CreateSlider("healslider", { Title = "Hp to Heal", Min = 1, Max = 100, Rounding = 1, Default = 80 })
 local healtextbox = Tabs.Combat:AddInput("healtextbox", { Title = "Custom Heal Item", Default = "Bloodfruit", Numeric = false, Finished = false })
 local numhealtextbox = Tabs.Combat:AddInput("numhealtextbox", { Title = "How many eat", Default = "5", Numeric = true, Finished = false })
 local killauratoggle = Tabs.Combat:CreateToggle("killauratoggle", { Title = "Kill Aura", Default = false })
@@ -81,8 +81,9 @@ local droptoggle = Tabs.Pickup:AddToggle("droptoggle", { Title = "Auto Drop", De
 local dropdropdown = Tabs.Pickup:AddDropdown("dropdropdown", {Title = "Select Item to Drop", Values = { "Bloodfruit", "Jelly", "Bluefruit", "Log", "Leaves", "Wood", "Sunfruit", "Crystal Chunk", "Emerald", "Raw Emerald", "Pink Diamond", "Raw Pink Diamond", "Void Shard","Jelly", "Magnetite", "Raw Magnetite", "Adurite", "Raw Adurite" }, Default = "Bloodfruit"})
 local droptogglemanual = Tabs.Pickup:AddToggle("droptogglemanual", { Title = "Auto Drop Custom", Default = false })
 local droptextbox = Tabs.Pickup:AddInput("droptextbox", { Title = "Custom Item", Default = "Bloodfruit", Numeric = false, Finished = false })
+local dropalltoggle = Tabs.Pickup:AddToggle("dropalltoggle", { Title = "Drop all", Default = false })
 --{FARMING TAB}
-local fruitdropdown = Tabs.Farming:CreateDropdown("fruitdropdown", {Title = "Select Fruit",Values = {"Bloodfruit", "Bluefruit", "Lemon", "Coconut", "Jelly", "Banana", "Orange", "Oddberry", "Berry", "Strangefruit", "Strawberry", "Sunjfruit", "Pumpkin", "Prickly Pear", "Apple",  "Barley", "Cloudberry", "Carrot", "Sunfruit", "Gold", "Raw Gold", "Emerald", "Raw Emerald", "Pink Diamond", "Raw Pink Diamond", "Void Shard","Jelly", "Magnetite", "Raw Magnetite", "Adurite", "Raw Adurite"}, Default = "Bloodfruit"})
+local fruitdropdown = Tabs.Farming:CreateDropdown("fruitdropdown", {Title = "Select Fruit",Values = {"Bloodfruit", "Bluefruit", "Lemon", "Coconut", "Jelly", "Banana", "Orange", "Oddberry", "Berry", "Strangefruit", "Strawberry", "Sunjfruit", "Pumpkin", "Prickly Pear", "Apple",  "Barley", "Cloudberry", "Carrot", "Sunfruit"}, Default = "Bloodfruit"})
 local planttoggle = Tabs.Farming:CreateToggle("planttoggle", { Title = "Auto Plant", Default = false })
 local plantrangeslider = Tabs.Farming:CreateSlider("plantrange", { Title = "Plant Range", Min = 1, Max = 30, Rounding = 1, Default = 30 })
 local plantdelayslider = Tabs.Farming:CreateSlider("plantdelay", { Title = "Plant Delay (s)", Min = 0.01, Max = 1, Rounding = 2, Default = 0.1 })
@@ -106,6 +107,28 @@ local orbitradiusslider = Tabs.Extra:CreateSlider("orbitradius", { Title = "Orbi
 local orbitspeedslider = Tabs.Extra:CreateSlider("orbitspeed", { Title = "Orbit Speed", Min = 0, Max = 10, Rounding = 1, Default = 5 })
 local itemheightslider = Tabs.Extra:CreateSlider("itemheight", { Title = "Item Height", Min = -3, Max = 10, Rounding = 1, Default = 3 })
 --{END OF TAB ELEMENTS}
+
+local function getFirstBackpackItemName()
+    local bp = lp:FindFirstChildOfClass("Backpack")
+    if not bp then return nil end
+
+    -- รวบรวมเฉพาะที่เป็น Tool (ส่วนใหญ่คือไอเท็มใน hotbar/อินเวนทอรี่)
+    local tools = {}
+    for _, it in ipairs(bp:GetChildren()) do
+        if it:IsA("Tool") then
+            table.insert(tools, it)
+        end
+    end
+
+    -- จัดลำดับให้คงที่ (ถ้าเกมของคุณมี Attribute ระบุ slot/index ให้ใช้ก่อน)
+    table.sort(tools, function(a, b)
+        local ia = a:GetAttribute("Slot") or a:GetAttribute("Index") or a.Name
+        local ib = b:GetAttribute("Slot") or b:GetAttribute("Index") or b.Name
+        return tostring(ia) < tostring(ib)
+    end)
+
+    return tools[1] and tools[1].Name or nil
+end
 
 local wscon, hhcon
 local function updws()
@@ -488,6 +511,16 @@ runs.Heartbeat:Connect(function()
     end
 end)
 
+runs.Heartbeat:Connect(function()
+    if Options.dropalltoggle.Value then
+        if tick() - debounce >= cd then
+            local itemname =  getFirstBackpackItemName()
+            drop(itemname)
+            debounce = tick()
+        end
+    end
+end)
+
 local plantedboxes = {}
 local fruittoitemid = {
     Bloodfruit = 94,
@@ -790,6 +823,7 @@ Library:Notify{
 SaveManager:LoadAutoloadConfig()
 
 print("Done! Enjoy Herkle Hub!")
+
 
 
 
