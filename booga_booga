@@ -513,8 +513,21 @@ end)
 
 runs.Heartbeat:Connect(function()
     if Options.dropalltoggle.Value then
-        if tick() - debounce >= cd then
-            local itemname =  getFirstBackpackItemName()
+    local inventory = game.Players.LocalPlayer.PlayerGui.MainGui.RightPanel.Inventory:FindFirstChild("List")
+    if not inventory then return end
+    local firstSlot = nil
+    local lowestOrder = math.huge
+
+    for _, child in ipairs(inventory:GetChildren()) do
+        if child:IsA("ImageLabel") and typeof(child.LayoutOrder) == "number" and child.LayoutOrder < lowestOrder then
+            lowestOrder = child.LayoutOrder
+            firstSlot = child
+        end
+    end
+    if firstSlot and (tick() - debounce) >= cd then
+        local nameFromLabel = firstSlot:FindFirstChild("Name") or firstSlot:FindFirstChild("Title") or firstSlot:FindFirstChildOfClass("TextLabel")
+        local itemname = (nameFromLabel and nameFromLabel.Text) or firstSlot.Name
+
             drop(itemname)
             debounce = tick()
         end
@@ -823,6 +836,7 @@ Library:Notify{
 SaveManager:LoadAutoloadConfig()
 
 print("Done! Enjoy Herkle Hub!")
+
 
 
 
